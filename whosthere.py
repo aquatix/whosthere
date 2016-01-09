@@ -41,13 +41,16 @@ def load_datetime(value, dt_format):
     return datetime.strptime(value, dt_format)
 
 
-def parselog(state, log):
+def parselog(state, session, log):
     """
     Parse contents of the `log` list, considering the info already in `state`.
     Return new version of `state`.
 
     Format of `state`:
     {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]}
+
+    Format of `session`:
+    {'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
     """
     timezonestring = '+0100'
     if is_dst('Europe/Amsterdam'):
@@ -62,10 +65,20 @@ def parselog(state, log):
         dt_info = parts[0].split(' ')
         #datetime = load_datetime(timestamp + timezonestring, "%d-%m-%Y %H:%M:%S%z")
         datetime = load_datetime(dt_info[0] + ' ' + dt_info[1] + timezonestring, "%Y-%m-%d %H:%M:%S%z")
+        if datetime != session['timestamp']:
+            # New series of log entries, we might need to close some sessions:
+            for mac_address in session['previous']:
+                state[mac_address][-1]['session_end'] = session['previous_timestamp']
+
+            # Update session to current series
+            session['previous'] = session['current']
+            session['previous_timestamp'] = session['timestamp']
+            session['timestamp'] = datetime
 
         try:
             latest_entry = state[mac_address][-1]
         except IndexError:
+            # Start new session, apparently this MAC address is new to the list
             latest_entry = {'session_start': datetime, 'session_end': None, 'ip': dt_info[2]}
             state[mac_address].append(latest_entry)
 
@@ -76,7 +89,7 @@ def parselog(state, log):
 
         state[mac_address][-1] = latest_entry
 
-    return state
+    return state, session
 
 
 ## Main program
@@ -97,6 +110,8 @@ def parselogs(logdir, prefix, macfile):
     Parse the whosthere logs
     """
     state = {}
+    #session = (None, [])
+    session = {'timestamp': None, 'previous_timestamp': None, 'previous': [], 'current': []}
     logfiles = os.listdir(logdir)
     logfiles.sort()
     #print logfiles
@@ -107,8 +122,9 @@ def parselogs(logdir, prefix, macfile):
             with open(filename) as f:
                 content = f.readlines()
                 content = [x.strip('\n') for x in content]
-                state = parselog(state, content)
+                state, session = parselog(state, session, content)
                 print state
+                print session
             #print 'wooh'
 
 
