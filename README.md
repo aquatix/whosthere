@@ -36,7 +36,7 @@ The lines then look like this:
 To make sense from this all, run the parser with:
 
 ```
-python whosthere.py parselogs --logdir=. --prefix=aquanet_clients --macfile=/home/mbscholt/.dot/privdotfiles/bin/cron/aquanet_macs.txt
+python whosthere.py parselogs --logdir=. --prefix=mynetwork --macfile=/home/myuser/.dot/privdotfiles/stuff/mynetwork_client_macs.txt
 
 or:
 
