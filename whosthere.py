@@ -68,7 +68,6 @@ def parselog(state, session, log):
             # We should seek until we found where we ended last time, skip this one
             continue
 
-        #print line
         parts = line.split(' = ')
         mac_address = parts[1].strip()
         if not mac_address in state['macs']:
@@ -164,13 +163,7 @@ def parselogs(logdir, prefix, macfile):
                 elif should_seek and state['current_file'] == filename:
                     # We're done skipping files
                     should_seek = False
-                #state, session = parselog(state, session, content)
                 parselog(state, session, content)
-                print state
-                print list(state.keys())
-                print state['current_file']
-                print session
-            #print 'wooh'
 
     # Save our state
     with open('state.json', 'w') as f:
