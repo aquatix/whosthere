@@ -71,8 +71,9 @@ def parselog(state, session, log):
         timestamp = dt_info[0] + ' ' + dt_info[1]
         if timestamp != session['timestamp']:
             # New series of log entries, we might need to close some sessions:
-            for mac_address in session['previous']:
-                state['macs'][mac_address][-1]['session_end'] = session['previous_timestamp']
+            for gone_mac_address in session['previous']:
+                #print(session['previous_timestamp'] + ' Ending session for ' + gone_mac_address)
+                state['macs'][gone_mac_address][-1]['session_end'] = session['previous_timestamp']
 
             # Update session to current series
             session['previous'] = list(session['current'])
