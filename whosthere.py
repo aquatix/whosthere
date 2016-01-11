@@ -93,6 +93,12 @@ def parselog(state, session, log):
             state['macs'][mac_address].append(latest_entry)
 
         state['macs'][mac_address][-1] = latest_entry
+        session['current'].append(mac_address)
+        try:
+            session['previous'].remove(mac_address)
+        except ValueError:
+            # MAC wasn't found in previous list
+            pass
 
     state['current_line'] = current_line
     return state, session
@@ -115,10 +121,15 @@ def parselogs(logdir, prefix, macfile):
     """
     Parse the whosthere logs
     """
-    state = {'current_file': 'blah', 'current_line': 0, 'macs': {}}
+    state = {'current_file': None, 'current_line': 0, 'macs': {}}
     session = {'timestamp': None, 'previous_timestamp': None, 'previous': [], 'current': []}
 
     # TODO: if state files exist, load them
+
+    should_seek = False
+    if state['current_file']:
+        # We should seek until we found the one we ended last time
+        should_seek = True
 
     # Get all filenames in the logdir
     logfiles = os.listdir(logdir)
@@ -126,10 +137,19 @@ def parselogs(logdir, prefix, macfile):
     logfiles.sort()
     for filename in logfiles:
         if filename[-4:] == '.log' and filename[0:len(prefix)] == prefix:
+            if should_seek and state['current_file'] != filename:
+                # We should seek until we found the one we ended last time, skip this one
+                continue
             with open(os.path.join(logdir, filename)) as f:
                 content = f.readlines()
                 content = [x.strip('\n') for x in content]
                 state['current_file'] = filename
+                if should_seek == False:
+                    # It's a fresh file, start at the top
+                    state['current_line'] = 0
+                elif should_seek and state['current_file'] == filename:
+                    # We're done skipping files
+                    should_seek = False
                 #state, session = parselog(state, session, content)
                 parselog(state, session, content)
                 print state
