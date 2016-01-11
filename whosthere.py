@@ -57,9 +57,17 @@ def parselog(state, session, log):
     if is_dst('Europe/Amsterdam'):
         timezonestring = '+0200'
 
+    should_seek = False
+    if state['current_line'] > 0:
+        should_seek = True
+
     current_line = 0
     for line in log:
         current_line += 1
+        if should_seek and current_line <= state['current_line']:
+            # We should seek until we found where we ended last time, skip this one
+            continue
+
         #print line
         parts = line.split(' = ')
         mac_address = parts[1].strip()
@@ -125,7 +133,12 @@ def parselogs(logdir, prefix, macfile):
     state = {'current_file': None, 'current_line': 0, 'macs': {}}
     session = {'timestamp': None, 'previous_timestamp': None, 'previous': [], 'current': []}
 
-    # TODO: if state files exist, load them
+    if os.path.isfile('state.json') and os.path.isfile('session.json'):
+        # Load saved state from storage
+        with open('state.json', 'r') as f:
+            state = json.load(f)
+        with open('session.json', 'r') as f:
+            session = json.load(f)
 
     should_seek = False
     if state['current_file']:
