@@ -2,6 +2,7 @@ import sys
 import os
 import __main__ as main
 from datetime import datetime, timedelta
+import json
 import pytz
 from pytz.tzinfo import StaticTzInfo
 from time import mktime
@@ -47,7 +48,7 @@ def parselog(state, session, log):
     Return new version of `state`.
 
     Format of `state`:
-    {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]}
+    {'current_file': 'filename', 'current_line': NN, 'macs': {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]}}
 
     Format of `session`:
     {'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
@@ -62,15 +63,16 @@ def parselog(state, session, log):
         #print line
         parts = line.split(' = ')
         mac_address = parts[1].strip()
-        if not mac_address in state:
-            state[mac_address] = []
+        if not mac_address in state['macs']:
+            state['macs'][mac_address] = []
         dt_info = parts[0].split(' ')
         #timestamp = load_datetime(timestamp + timezonestring, "%d-%m-%Y %H:%M:%S%z")
-        timestamp = load_datetime(dt_info[0] + ' ' + dt_info[1] + timezonestring, "%Y-%m-%d %H:%M:%S%z")
+        #timestamp = load_datetime(dt_info[0] + ' ' + dt_info[1] + timezonestring, "%Y-%m-%d %H:%M:%S%z")
+        timestamp = dt_info[0] + ' ' + dt_info[1]
         if timestamp != session['timestamp']:
             # New series of log entries, we might need to close some sessions:
             for mac_address in session['previous']:
-                state[mac_address][-1]['session_end'] = session['previous_timestamp']
+                state['macs'][mac_address][-1]['session_end'] = session['previous_timestamp']
 
             # Update session to current series
             session['previous'] = list(session['current'])
@@ -79,18 +81,18 @@ def parselog(state, session, log):
             session['timestamp'] = timestamp
 
         try:
-            latest_entry = state[mac_address][-1]
+            latest_entry = state['macs'][mac_address][-1]
         except IndexError:
             # Start new session, apparently this MAC address is new to the list
             latest_entry = {'session_start': timestamp, 'session_end': None, 'ip': dt_info[2]}
-            state[mac_address].append(latest_entry)
+            state['macs'][mac_address].append(latest_entry)
 
         if latest_entry['session_end']:
             # Previous entry was end of a session, create new session
             latest_entry = {'session_start': timestamp, 'session_end': None, 'ip': dt_info[2]}
-            state[mac_address].append(latest_entry)
+            state['macs'][mac_address].append(latest_entry)
 
-        state[mac_address][-1] = latest_entry
+        state['macs'][mac_address][-1] = latest_entry
 
     state['current_line'] = current_line
     return state, session
@@ -113,8 +115,11 @@ def parselogs(logdir, prefix, macfile):
     """
     Parse the whosthere logs
     """
-    state = {'current_file': '', 'current_line': 0}
+    state = {'current_file': 'blah', 'current_line': 0, 'macs': {}}
     session = {'timestamp': None, 'previous_timestamp': None, 'previous': [], 'current': []}
+
+    # TODO: if state files exist, load them
+
     # Get all filenames in the logdir
     logfiles = os.listdir(logdir)
     # Make sure the files are ordered by the dates in their names
@@ -128,9 +133,16 @@ def parselogs(logdir, prefix, macfile):
                 #state, session = parselog(state, session, content)
                 parselog(state, session, content)
                 print state
+                print list(state.keys())
                 print state['current_file']
                 print session
             #print 'wooh'
+
+    # Save our state
+    with open('state.json', 'w') as f:
+        f.write(json.dumps(state))
+    with open('session.json', 'w') as f:
+        f.write(json.dumps(session))
 
 
 if not hasattr(main, '__file__'):
