@@ -314,6 +314,44 @@ def current_sessions(macfile):
     print(to_smart_columns(data, headers))
 
 
+@cli.command()
+@click.option('--address', prompt='MAC address to show the sessions for')
+@click.option('--macfile', prompt='Path to file with MAC address mappings')
+def client_sessions(address, macfile):
+    """
+    Show latest sessions for all known clients
+    """
+    if os.path.isfile('state.json'):
+        # Load saved state from storage
+        with open('state.json', 'r') as f:
+            state = json.load(f)
+    else:
+        print("No state saved to disk (state.json), so can't extract info")
+        sys.exit(1)
+
+    if not os.path.isfile(macfile):
+        print('File with MAC address mappings not found: ' + macfile)
+        sys.exit(1)
+
+    mac_to_name = read_macmappings_file(macfile)
+
+    data = []
+    for mac in state['macs']:
+        if mac == address:
+            try:
+                name = mac_to_name[mac]
+            except KeyError:
+                name = '-' # (unknown)
+            info = state['macs'][mac][-1]
+            if info['session_end'] == None:
+                info['session_end'] = ''
+            data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+
+    headers = ['MAC', 'IP', 'name', 'session start', 'session end']
+    print(to_smart_columns(data, headers))
+
+
+
 if not hasattr(main, '__file__'):
     """
     Running in interactive mode in the Python shell
