@@ -61,7 +61,7 @@ def to_even_columns(data, headers=None):
     return result
 
 
-def to_smart_columns(data, headers=None):
+def to_smart_columns(data, headers=None, padding=2):
     """
     Nicely format the 2-dimensional list into columns
     """
@@ -86,7 +86,7 @@ def to_smart_columns(data, headers=None):
             col_counter += 1
 
     # Add padding
-    col_widths = [width + 2 for width in col_widths]
+    col_widths = [width + padding for width in col_widths]
     total_width = sum(col_widths)
 
     if headers:
