@@ -190,6 +190,25 @@ def read_macmappings_file(macfile):
     return names
 
 
+def read_state(macfile):
+    """
+    Get state log from disk and read the MAC address mappings
+    """
+    if os.path.isfile('state.json'):
+        # Load saved state from storage
+        with open('state.json', 'r') as f:
+            state = json.load(f)
+    else:
+        print("No state saved to disk (state.json), so can't extract info")
+        sys.exit(1)
+
+    if not os.path.isfile(macfile):
+        print('File with MAC address mappings not found: ' + macfile)
+        sys.exit(1)
+
+    return state, read_macmappings_file(macfile)
+
+
 ## Main program
 @click.group()
 def cli():
@@ -251,19 +270,7 @@ def last_sessions(macfile):
     """
     Show latest sessions for all known clients
     """
-    if os.path.isfile('state.json'):
-        # Load saved state from storage
-        with open('state.json', 'r') as f:
-            state = json.load(f)
-    else:
-        print("No state saved to disk (state.json), so can't extract info")
-        sys.exit(1)
-
-    if not os.path.isfile(macfile):
-        print('File with MAC address mappings not found: ' + macfile)
-        sys.exit(1)
-
-    mac_to_name = read_macmappings_file(macfile)
+    state, mac_to_name = read_state(macfile)
 
     data = []
     for mac in state['macs']:
@@ -286,19 +293,7 @@ def current_sessions(macfile):
     """
     Show currently open sessions
     """
-    if os.path.isfile('state.json'):
-        # Load saved state from storage
-        with open('state.json', 'r') as f:
-            state = json.load(f)
-    else:
-        print("No state saved to disk (state.json), so can't extract info")
-        sys.exit(1)
-
-    if not os.path.isfile(macfile):
-        print('File with MAC address mappings not found: ' + macfile)
-        sys.exit(1)
-
-    mac_to_name = read_macmappings_file(macfile)
+    state, mac_to_name = read_state(macfile)
 
     data = []
     for mac in state['macs']:
@@ -321,19 +316,7 @@ def client_sessions(address, macfile):
     """
     Show latest sessions for all known clients
     """
-    if os.path.isfile('state.json'):
-        # Load saved state from storage
-        with open('state.json', 'r') as f:
-            state = json.load(f)
-    else:
-        print("No state saved to disk (state.json), so can't extract info")
-        sys.exit(1)
-
-    if not os.path.isfile(macfile):
-        print('File with MAC address mappings not found: ' + macfile)
-        sys.exit(1)
-
-    mac_to_name = read_macmappings_file(macfile)
+    state, mac_to_name = read_state(macfile)
 
     data = []
     for mac in state['macs']:
