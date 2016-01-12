@@ -36,9 +36,35 @@ The lines then look like this:
 To make sense from this all, run the parser with:
 
 ```
-python whosthere.py parselogs --logdir=. --prefix=mynetwork --macfile=/home/myuser/.dot/privdotfiles/stuff/mynetwork_client_macs.txt
+python whosthere.py parselogs --logdir=. --prefix=mynetwork
 
 or:
 
-python whosthere.py parselogs --logdir=/var/log/whosthere --prefix=mynetwork --macfile=/home/myuser/workspace/mynetwork_client_macs.txt
+python whosthere.py parselogs --logdir=/var/log/whosthere --prefix=mynetwork
+```
+
+To get the latest sessions of all known clients:
+```
+python whosthere last_sessions --macfile=/home/myuser/workspace/mynetwork_client_macs.txt
+```
+
+Or get only the currently online clients:
+```
+python whosthere current_sessions --macfile=/home/myuser/workspace/mynetwork_client_macs.txt
+```
+
+And of course history can be looked up:
+```
+python whosthere client_sessions --address="AA BB CC DD EE FF" --macfile=/home/myuser/workspace/mynetwork_client_macs.txt
+```
+
+
+## MAC address translation file
+
+To make more sense of the MAC address listed, you can map them to known hostnames (or descriptions), called the `macfile` in the parameters:
+
+```
+XX 00 00 00 00 06=WAN Gateway
+XX 5F F4 61 08 22=Server
+XX 04 20 1E 95 75=Grandma's smartphone
 ```
