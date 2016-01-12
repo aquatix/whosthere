@@ -227,10 +227,10 @@ def client_sessions(macfile):
             name = mac_to_name[mac]
         except KeyError:
             name = '(unknown)'
-        #print mac + '  ' + name + '  ' + str(state['macs'][mac][-1])
         info = state['macs'][mac][-1]
-        #data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
-        data.append([mac, info['ip'], name, info['session_start']])
+        if info['session_end'] == None:
+            info['session_end'] = ''
+        data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
     print(to_columns(data))
 
