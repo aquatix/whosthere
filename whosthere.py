@@ -42,7 +42,7 @@ def load_datetime(value, dt_format):
     return datetime.strptime(value, dt_format)
 
 
-def to_columns(data, headers=None):
+def to_even_columns(data, headers=None):
     """
     Nicely format the 2-dimensional list into evenly spaced columns
     """
@@ -58,6 +58,51 @@ def to_columns(data, headers=None):
 
     for row in data:
         result += "".join(word.ljust(col_width) for word in row) + "\n"
+    return result
+
+
+def to_smart_columns(data, headers=None):
+    """
+    Nicely format the 2-dimensional list into columns
+    """
+    result = ''
+    col_widths = []
+    for row in data:
+        col_counter = 0
+        for word in row:
+            try:
+                col_widths[col_counter] = max(len(word), col_widths[col_counter])
+            except IndexError:
+                col_widths.append(len(word))
+            col_counter += 1
+
+    if headers:
+        col_counter = 0
+        for word in headers:
+            try:
+                col_widths[col_counter] = max(len(word), col_widths[col_counter])
+            except IndexError:
+                col_widths.append(len(word))
+            col_counter += 1
+
+    # Add padding
+    col_widths = [width + 2 for width in col_widths]
+    total_width = sum(col_widths)
+
+    if headers:
+        col_counter = 0
+        for word in headers:
+            result += "".join(word.ljust(col_widths[col_counter]))
+            col_counter += 1
+        result += "\n"
+        result += '-' * total_width + "\n"
+
+    for row in data:
+        col_counter = 0
+        for word in row:
+            result += "".join(word.ljust(col_widths[col_counter]))
+            col_counter += 1
+        result += "\n"
     return result
 
 
@@ -241,7 +286,7 @@ def client_sessions(macfile):
         data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
     headers = ['MAC', 'IP', 'name', 'session start', 'session end']
-    print(to_columns(data, headers))
+    print(to_smart_columns(data, headers))
 
 
 
