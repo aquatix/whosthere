@@ -342,10 +342,10 @@ def client_sessions(address, macfile):
                 name = mac_to_name[mac]
             except KeyError:
                 name = '-' # (unknown)
-            info = state['macs'][mac][-1]
-            if info['session_end'] == None:
-                info['session_end'] = ''
-            data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+            for info in state['macs'][mac]:
+                if info['session_end'] == None:
+                    info['session_end'] = ''
+                data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
     headers = ['MAC', 'IP', 'name', 'session start', 'session end']
     print(to_smart_columns(data, headers))
