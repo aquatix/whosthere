@@ -106,16 +106,14 @@ def to_smart_columns(data, headers=None, padding=2):
     return result
 
 
-def parselog(state, session, log):
+def parselog(state, log):
     """
     Parse contents of the `log` list, considering the info already in `state`.
     Return new version of `state`.
 
     Format of `state`:
-    {'current_file': 'filename', 'current_line': NN, 'macs': {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]}}
-
-    Format of `session`:
-    {'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
+    {'current_file': 'filename', 'current_line': NN, 'macs': {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]},
+    'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
     """
     timezonestring = '+0100'
     if is_dst('Europe/Amsterdam'):
@@ -140,17 +138,17 @@ def parselog(state, session, log):
         #timestamp = load_datetime(timestamp + timezonestring, "%d-%m-%Y %H:%M:%S%z")
         #timestamp = load_datetime(dt_info[0] + ' ' + dt_info[1] + timezonestring, "%Y-%m-%d %H:%M:%S%z")
         timestamp = dt_info[0] + ' ' + dt_info[1]
-        if timestamp != session['timestamp']:
+        if timestamp != state['timestamp']:
             # New series of log entries, we might need to close some sessions:
-            for gone_mac_address in session['previous']:
-                #print(session['previous_timestamp'] + ' Ending session for ' + gone_mac_address)
-                state['macs'][gone_mac_address][-1]['session_end'] = session['previous_timestamp']
+            for gone_mac_address in state['previous_macs']:
+                #print(state['previous_timestamp'] + ' Ending session for ' + gone_mac_address)
+                state['macs'][gone_mac_address][-1]['session_end'] = state['previous_timestamp']
 
             # Update session to current series
-            session['previous'] = list(session['current'])
-            session['current'] = []
-            session['previous_timestamp'] = session['timestamp']
-            session['timestamp'] = timestamp
+            state['previous_macs'] = list(state['current_macs'])
+            state['current_macs'] = []
+            state['previous_timestamp'] = state['timestamp']
+            state['timestamp'] = timestamp
 
         try:
             latest_entry = state['macs'][mac_address][-1]
@@ -165,15 +163,15 @@ def parselog(state, session, log):
             state['macs'][mac_address].append(latest_entry)
 
         state['macs'][mac_address][-1] = latest_entry
-        session['current'].append(mac_address)
+        state['current_macs'].append(mac_address)
         try:
-            session['previous'].remove(mac_address)
+            state['previous_macs'].remove(mac_address)
         except ValueError:
             # MAC wasn't found in previous list
             pass
 
     state['current_line'] = current_line
-    return state, session
+    return state
 
 
 def read_macmappings_file(macfile):
@@ -208,15 +206,13 @@ def parselogs(logdir, prefix):
     """
     Parse the whosthere logs
     """
-    state = {'current_file': None, 'current_line': 0, 'macs': {}}
-    session = {'timestamp': None, 'previous_timestamp': None, 'previous': [], 'current': []}
+    state = {'current_file': None, 'current_line': 0, 'macs': {},
+             'timestamp': None, 'previous_timestamp': None, 'previous_macs': [], 'current_macs': []}
 
     if os.path.isfile('state.json') and os.path.isfile('session.json'):
         # Load saved state from storage
         with open('state.json', 'r') as f:
             state = json.load(f)
-        with open('session.json', 'r') as f:
-            session = json.load(f)
 
     should_seek = False
     if state['current_file']:
@@ -242,13 +238,11 @@ def parselogs(logdir, prefix):
                 elif should_seek and state['current_file'] == filename:
                     # We're done skipping files
                     should_seek = False
-                parselog(state, session, content)
+                parselog(state, content)
 
     # Save our state
     with open('state.json', 'w') as f:
         f.write(json.dumps(state))
-    with open('session.json', 'w') as f:
-        f.write(json.dumps(session))
 
 
 @cli.command()
@@ -257,12 +251,10 @@ def last_sessions(macfile):
     """
     Show latest sessions for all known clients
     """
-    if os.path.isfile('state.json') and os.path.isfile('session.json'):
+    if os.path.isfile('state.json'):
         # Load saved state from storage
         with open('state.json', 'r') as f:
             state = json.load(f)
-        with open('session.json', 'r') as f:
-            session = json.load(f)
     else:
         print("No state saved to disk (state.json), so can't extract info")
         sys.exit(1)
