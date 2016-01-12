@@ -42,6 +42,17 @@ def load_datetime(value, dt_format):
     return datetime.strptime(value, dt_format)
 
 
+def to_columns(data):
+    """
+    Nicely format the 2-dimensional list into evenly spaced columns
+    """
+    result = ''
+    col_width = max(len(word) for row in data for word in row) + 2  # padding
+    for row in data:
+        result += "".join(word.ljust(col_width) for word in row) + "\n"
+    return result
+
+
 def parselog(state, session, log):
     """
     Parse contents of the `log` list, considering the info already in `state`.
@@ -112,6 +123,22 @@ def parselog(state, session, log):
     return state, session
 
 
+def read_macmappings_file(macfile):
+    """
+    Read and parse MAC address to readable name mappings
+    """
+    with open(macfile, 'r') as f:
+        mappings = f.readlines()
+        mappings = [x.strip('\n') for x in mappings]
+
+    names = {}
+
+    for line in mappings:
+        parts = line.split('=')#
+        names[parts[0]] = parts[1]
+    return names
+
+
 ## Main program
 @click.group()
 def cli():
@@ -170,6 +197,43 @@ def parselogs(logdir, prefix, macfile):
         f.write(json.dumps(state))
     with open('session.json', 'w') as f:
         f.write(json.dumps(session))
+
+
+@cli.command()
+@click.option('--macfile', prompt='Path to file with MAC address mappings')
+def client_sessions(macfile):
+    """
+    Show latest sessions for all known clients
+    """
+    if os.path.isfile('state.json') and os.path.isfile('session.json'):
+        # Load saved state from storage
+        with open('state.json', 'r') as f:
+            state = json.load(f)
+        with open('session.json', 'r') as f:
+            session = json.load(f)
+    else:
+        print("No state saved to disk (state.json), so can't extract info")
+        sys.exit(1)
+
+    if not os.path.isfile(macfile):
+        print('File with MAC address mappings not found: ' + macfile)
+        sys.exit(1)
+
+    mac_to_name = read_macmappings_file(macfile)
+
+    data = []
+    for mac in state['macs']:
+        try:
+            name = mac_to_name[mac]
+        except KeyError:
+            name = '(unknown)'
+        #print mac + '  ' + name + '  ' + str(state['macs'][mac][-1])
+        info = state['macs'][mac][-1]
+        #data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+        data.append([mac, info['ip'], name, info['session_start']])
+
+    print(to_columns(data))
+
 
 
 if not hasattr(main, '__file__'):
