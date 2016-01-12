@@ -204,8 +204,7 @@ def cli():
 @cli.command()
 @click.option('--logdir', prompt='Path to the logfiles directory', help='')
 @click.option('--prefix', prompt='Logfile prefix', help='Prefix of the log files, before the date')
-@click.option('--macfile', prompt='Path to file with MAC address mappings')
-def parselogs(logdir, prefix, macfile):
+def parselogs(logdir, prefix):
     """
     Parse the whosthere logs
     """
@@ -254,7 +253,7 @@ def parselogs(logdir, prefix, macfile):
 
 @cli.command()
 @click.option('--macfile', prompt='Path to file with MAC address mappings')
-def client_sessions(macfile):
+def last_sessions(macfile):
     """
     Show latest sessions for all known clients
     """
