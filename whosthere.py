@@ -42,12 +42,20 @@ def load_datetime(value, dt_format):
     return datetime.strptime(value, dt_format)
 
 
-def to_columns(data):
+def to_columns(data, headers=None):
     """
     Nicely format the 2-dimensional list into evenly spaced columns
     """
     result = ''
     col_width = max(len(word) for row in data for word in row) + 2  # padding
+    if headers:
+        header_width = max(len(word) for row in headers for word in row) + 2
+        if header_width > col_width:
+            col_width = header_width
+
+        result += "".join(word.ljust(col_width) for word in headers) + "\n"
+        result += '-' * col_width * len(headers) + "\n"
+
     for row in data:
         result += "".join(word.ljust(col_width) for word in row) + "\n"
     return result
@@ -232,7 +240,8 @@ def client_sessions(macfile):
             info['session_end'] = ''
         data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
-    print(to_columns(data))
+    headers = ['MAC', 'IP', 'name', 'session start', 'session end']
+    print(to_columns(data, headers))
 
 
 
