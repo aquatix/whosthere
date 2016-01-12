@@ -312,7 +312,9 @@ def current_sessions(macfile):
 @cli.command()
 @click.option('--address', prompt='MAC address to show the sessions for')
 @click.option('--macfile', prompt='Path to file with MAC address mappings')
-def client_sessions(address, macfile):
+@click.option('--all/--latest', prompt='Show all? (Otherwise only the latest session is shown)', default=True)
+@click.option('--headers/--no-headers', prompt='Show headers on the table?', default=True)
+def client_sessions(address, macfile, all, headers):
     """
     Show latest sessions for all known clients
     """
@@ -325,13 +327,22 @@ def client_sessions(address, macfile):
                 name = mac_to_name[mac]
             except KeyError:
                 name = '-' # (unknown)
-            for info in state['macs'][mac]:
+            if all:
+                for info in state['macs'][mac]:
+                    if info['session_end'] == None:
+                        info['session_end'] = ''
+                    data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+            else:
+                info = state['macs'][mac][-1]
                 if info['session_end'] == None:
                     info['session_end'] = ''
                 data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
-    headers = ['MAC', 'IP', 'name', 'session start', 'session end']
-    print(to_smart_columns(data, headers))
+    if headers:
+        headers = ['MAC', 'IP', 'name', 'session start', 'session end']
+        print(to_smart_columns(data, headers))
+    else:
+        print(to_smart_columns(data))
 
 
 
