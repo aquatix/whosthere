@@ -365,8 +365,12 @@ def search_client_sessions(find, macfile, all, no_headers):
 
     macs = []
     for mac in state['macs']:
-        if find.lower() in mac_to_name[mac].lower():
-            macs.append(mac)
+        try:
+            if find.lower() in mac_to_name[mac].lower():
+                macs.append(mac)
+        except KeyError:
+            # MAC not found in mapping file, skip
+            pass
 
     print filter_sessions(state, mac_to_name, macs, all, no_headers)
 
