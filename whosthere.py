@@ -209,6 +209,35 @@ def read_state(macfile):
     return state, read_macmappings_file(macfile)
 
 
+def filter_sessions(state, mac_to_name, macs, all=True, no_headers=False):
+    """
+    Show (all|latest) sessions for the clients in macs[]
+    """
+    data = []
+    for mac in state['macs']:
+        if mac in macs:
+            try:
+                name = mac_to_name[mac]
+            except KeyError:
+                name = '-' # (unknown)
+            if all:
+                for info in state['macs'][mac]:
+                    if info['session_end'] == None:
+                        info['session_end'] = ''
+                    data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+            else:
+                info = state['macs'][mac][-1]
+                if info['session_end'] == None:
+                    info['session_end'] = ''
+                data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+
+    if no_headers:
+        return to_smart_columns(data)
+    else:
+        headers = ['MAC', 'IP', 'name', 'session start', 'session end']
+        return to_smart_columns(data, headers)
+
+
 ## Main program
 @click.group()
 def cli():
@@ -316,33 +345,30 @@ def current_sessions(macfile):
 @click.option('--no-headers', is_flag=True)
 def client_sessions(address, macfile, all, no_headers):
     """
-    Show latest sessions for all known clients
+    Show all sessions for a certain client
     """
     state, mac_to_name = read_state(macfile)
 
-    data = []
-    for mac in state['macs']:
-        if mac == address:
-            try:
-                name = mac_to_name[mac]
-            except KeyError:
-                name = '-' # (unknown)
-            if all:
-                for info in state['macs'][mac]:
-                    if info['session_end'] == None:
-                        info['session_end'] = ''
-                    data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
-            else:
-                info = state['macs'][mac][-1]
-                if info['session_end'] == None:
-                    info['session_end'] = ''
-                data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
+    print filter_sessions(state, mac_to_name, [address], all, no_headers)
 
-    if no_headers:
-        print(to_smart_columns(data))
-    else:
-        headers = ['MAC', 'IP', 'name', 'session start', 'session end']
-        print(to_smart_columns(data, headers))
+
+@cli.command()
+@click.option('--find', prompt='Text to search for in name/description')
+@click.option('--macfile', prompt='Path to file with MAC address mappings')
+@click.option('--all/--latest', prompt='Show all? (Otherwise only the latest session is shown)', default=True)
+@click.option('--no-headers', is_flag=True)
+def search_client_sessions(find, macfile, all, no_headers):
+    """
+    Search for `find` in the name/description and find the sessions for this client/those clients
+    """
+    state, mac_to_name = read_state(macfile)
+
+    macs = []
+    for mac in state['macs']:
+        if find.lower() in mac_to_name[mac].lower():
+            macs.append(mac)
+
+    print filter_sessions(state, mac_to_name, macs, all, no_headers)
 
 
 if not hasattr(main, '__file__'):
