@@ -1,109 +1,9 @@
 import sys
 import os
 import __main__ as main
-from datetime import datetime, timedelta
+from utilkit import datetimeutil, printutil
 import json
-import pytz
-from pytz.tzinfo import StaticTzInfo
-from time import mktime
 import click
-
-
-def is_dst(zonename):
-    tz = pytz.timezone(zonename)
-    now = pytz.utc.localize(datetime.utcnow())
-    return now.astimezone(tz).dst() != timedelta(0)
-
-
-class OffsetTime(StaticTzInfo):
-    """
-    A dumb timezone based on offset such as +0530, -0600, etc.
-    """
-    def __init__(self, offset):
-        hours = int(offset[:3])
-        minutes = int(offset[0] + offset[3:])
-        self._utcoffset = timedelta(hours=hours, minutes=minutes)
-
-
-def load_datetime(value, dt_format):
-    """
-    Create timezone-aware datetime object
-    """
-    if dt_format.endswith('%z'):
-        dt_format = dt_format[:-2]
-        offset = value[-5:]
-        value = value[:-5]
-        if offset != offset.replace(':', ''):
-            # strip : from HHMM if needed (isoformat() adds it between HH and MM)
-            offset = '+' + offset.replace(':', '')
-            value = value[:-1]
-        return OffsetTime(offset).localize(datetime.strptime(value, dt_format))
-
-    return datetime.strptime(value, dt_format)
-
-
-def to_even_columns(data, headers=None):
-    """
-    Nicely format the 2-dimensional list into evenly spaced columns
-    """
-    result = ''
-    col_width = max(len(word) for row in data for word in row) + 2  # padding
-    if headers:
-        header_width = max(len(word) for row in headers for word in row) + 2
-        if header_width > col_width:
-            col_width = header_width
-
-        result += "".join(word.ljust(col_width) for word in headers) + "\n"
-        result += '-' * col_width * len(headers) + "\n"
-
-    for row in data:
-        result += "".join(word.ljust(col_width) for word in row) + "\n"
-    return result
-
-
-def to_smart_columns(data, headers=None, padding=2):
-    """
-    Nicely format the 2-dimensional list into columns
-    """
-    result = ''
-    col_widths = []
-    for row in data:
-        col_counter = 0
-        for word in row:
-            try:
-                col_widths[col_counter] = max(len(word), col_widths[col_counter])
-            except IndexError:
-                col_widths.append(len(word))
-            col_counter += 1
-
-    if headers:
-        col_counter = 0
-        for word in headers:
-            try:
-                col_widths[col_counter] = max(len(word), col_widths[col_counter])
-            except IndexError:
-                col_widths.append(len(word))
-            col_counter += 1
-
-    # Add padding
-    col_widths = [width + padding for width in col_widths]
-    total_width = sum(col_widths)
-
-    if headers:
-        col_counter = 0
-        for word in headers:
-            result += "".join(word.ljust(col_widths[col_counter]))
-            col_counter += 1
-        result += "\n"
-        result += '-' * total_width + "\n"
-
-    for row in data:
-        col_counter = 0
-        for word in row:
-            result += "".join(word.ljust(col_widths[col_counter]))
-            col_counter += 1
-        result += "\n"
-    return result
 
 
 def parselog(state, log):
@@ -116,7 +16,7 @@ def parselog(state, log):
     'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
     """
     timezonestring = '+0100'
-    if is_dst('Europe/Amsterdam'):
+    if datetimeutil.is_dst('Europe/Amsterdam'):
         timezonestring = '+0200'
 
     should_seek = False
@@ -232,10 +132,10 @@ def filter_sessions(state, mac_to_name, macs, all=True, no_headers=False):
                 data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
     if no_headers:
-        return to_smart_columns(data)
+        return printutil.to_smart_columns(data)
     else:
         headers = ['MAC', 'IP', 'name', 'session start', 'session end']
-        return to_smart_columns(data, headers)
+        return printutil.to_smart_columns(data, headers)
 
 
 ## Main program
@@ -313,7 +213,7 @@ def last_sessions(macfile):
         data.append([mac, info['ip'], name, info['session_start'], info['session_end']])
 
     headers = ['MAC', 'IP', 'name', 'session start', 'session end']
-    print(to_smart_columns(data, headers))
+    print(printutil.to_smart_columns(data, headers))
 
 
 @cli.command()
@@ -335,7 +235,7 @@ def current_sessions(macfile):
             data.append([mac, info['ip'], name, info['session_start']])
 
     headers = ['MAC', 'IP', 'name', 'session start']
-    print(to_smart_columns(data, headers))
+    print(printutil.to_smart_columns(data, headers))
 
 
 @cli.command()
