@@ -1,6 +1,8 @@
 whosthere
 ---------
 
+[![Code Health](https://landscape.io/github/aquatix/whosthere/master/landscape.svg?style=flat)](https://landscape.io/github/aquatix/whosthere/master)
+
 Determine who is or was online on your network by keeping track of SNMP info from your router.
 
 For example, the following one-liner (which is executed every minute from crontab) gets the relevant information from my DD-WRT-running NetGear router:
