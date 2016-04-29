@@ -15,9 +15,9 @@ def parselog(state, log):
     {'current_file': 'filename', 'current_line': NN, 'macs': {'<MAC ADDRESS 1>': [{'session_start': '<datetime>', 'session_end': '<datetime>', 'ip': '<ip address>'}, {'session_start'...}], '<MAC ADDRESS 2>': [...]},
     'timestamp': <latest timestamp>, 'previous_timestamp': <previous timestamp>, 'previous_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 4>'], 'current_macs': ['<MAC ADDRESS 2>', '<MAC ADDRESS 3>']}
     """
-    timezonestring = '+0100'
-    if datetimeutil.is_dst('Europe/Amsterdam'):
-        timezonestring = '+0200'
+    #timezonestring = '+0100'
+    #if datetimeutil.is_dst('Europe/Amsterdam'):
+    #    timezonestring = '+0200'
 
     should_seek = False
     if state['current_line'] > 0:
@@ -109,7 +109,7 @@ def read_state(macfile):
     return state, read_macmappings_file(macfile)
 
 
-def filter_sessions(state, mac_to_name, macs, all=True, no_headers=False):
+def filter_sessions(state, mac_to_name, macs, allsessions=True, no_headers=False):
     """
     Show (all|latest) sessions for the clients in macs[]
     """
@@ -120,7 +120,7 @@ def filter_sessions(state, mac_to_name, macs, all=True, no_headers=False):
                 name = mac_to_name[mac]
             except KeyError:
                 name = '-' # (unknown)
-            if all:
+            if allsessions:
                 for info in state['macs'][mac]:
                     if info['session_end'] == None:
                         info['session_end'] = ''
